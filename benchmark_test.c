@@ -30,7 +30,17 @@ int main(void)
 
         cnt_test = neon_rej_uniform(r_test, input);
         cnt_test_half = neon_rej_uniform_half(r_test_half, input);
+
+#ifdef DEBUG
+        print_array(input, sizeof(input), "input");
+#endif
+
         cnt_test_mix = neon_rej_uniform_mix(r_test_mix, input);
+
+#ifdef DEBUG
+        print_array(input, sizeof(input), "input");
+#endif
+
 
         if (cnt_gold != cnt_test)
         {

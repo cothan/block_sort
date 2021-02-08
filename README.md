@@ -13,9 +13,9 @@ This code is developed and tested on Raspberry Pi 4 8Gb Cortex-A72.
 
 ## Result
 
-|                    |   C  | NEON-Full | Ratio| NEON-Half | Ratio|
-|:------------------:|:----:|:---------:|------|:---------:|:----:|
-| Rejection Sampling | 1887 |    771    | 2.44 |    1251   | 1.50 |
+|                    |   C  | NEON-Full | Ratio| NEON-Half | Ratio| NEON-Mix | Ratio |
+|:------------------:|:----:|:---------:|------|:---------:|:----:|:--------:|:-----:|
+| Rejection Sampling | 1686 |    773    | 2.18 |    1250   | 1.34 | 765      |  2.20 |
 
 
 

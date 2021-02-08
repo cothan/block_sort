@@ -1,6 +1,8 @@
 #include <arm_neon.h>
 #include <stdio.h>
 
+#define BUF_LEN 528
+
 const uint8_t table_idx[256][16] = {
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // 0
     {0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},   // 1
@@ -336,9 +338,12 @@ int compare(int16_t *a, int16_t *b, int len)
             return 1;
         }
     }
+    if (count)
+    {
+        return 1;
+    }
     return 0;
 }
-
 
 unsigned int neon_rej_uniform(int16_t *r, const uint8_t *buf)
 {
@@ -557,7 +562,6 @@ unsigned int neon_rej_uniform_half(int16_t *r, const uint8_t *buf)
     return count;
 }
 
-
 unsigned int neon_rej_uniform_mix(int16_t *r, const uint8_t *buf)
 {
     uint8x16x3_t neon_buf;
@@ -567,14 +571,14 @@ unsigned int neon_rej_uniform_mix(int16_t *r, const uint8_t *buf)
     uint8x16x4_t neon_table;
     uint16x8_t const_kyberq, neon_bit, const_0xfff;
 
-    vload(neon_bit, bit_table);
+    neon_bit = vld1q_u16(bit_table);
     const_kyberq = vdupq_n_u16(3329 - 1);
     const_0xfff = vdupq_n_u16(0xfff);
 
     unsigned int reduce_indexes[4], ctr[4];
-    unsigned int i, count = 0;
+    unsigned int i = 0, count = 0;
 
-    for (i = 0; i < (BUF_LEN - 48) && count < (256 - 32); i += 16*3)
+    for (i = 0; i < (BUF_LEN - 48) && count < (256 - 32); i += 16 * 3)
     {
         // 0, 3, 6, 9  - 12, 15, 18, 21
         // 1, 4, 7, 10 - 13, 16, 19, 22
@@ -660,8 +664,12 @@ unsigned int neon_rej_uniform_mix(int16_t *r, const uint8_t *buf)
     const8_0xfff = vdup_n_u16(0xfff);
     neon_bit8 = vld1_u16(bit_table);
 
-    int16_t local_buf[48];
-    unsigned int local_index = 0;
+    int16_t local_buf[48], local_index = 0;
+    unsigned int bound = count;
+#ifdef DEBUG
+    printf("count = %d\n", count);
+#endif
+
     do
     {
         neon_buf8 = vld3_u8(&buf[i]);
@@ -722,23 +730,30 @@ unsigned int neon_rej_uniform_mix(int16_t *r, const uint8_t *buf)
         value8.val[2] = (uint16x4_t)vtbl1_u8((uint8x8_t)value8.val[2], neon_table8.val[2]);
         value8.val[3] = (uint16x4_t)vtbl1_u8((uint8x8_t)value8.val[3], neon_table8.val[3]);
 
-        vst1_s16(&local_buf[count], (int16x4_t)value8.val[0]);
-        count += ctr[0];
-        vst1_s16(&local_buf[count], (int16x4_t)value8.val[1]);
-        count += ctr[1];
-        vst1_s16(&local_buf[count], (int16x4_t)value8.val[2]);
-        count += ctr[2];
-        vst1_s16(&local_buf[count], (int16x4_t)value8.val[3]);
-        count += ctr[3];
+        vst1_s16(&local_buf[local_index], (int16x4_t)value8.val[0]);
+        local_index += ctr[0];
+        vst1_s16(&local_buf[local_index], (int16x4_t)value8.val[1]);
+        local_index += ctr[1];
+        vst1_s16(&local_buf[local_index], (int16x4_t)value8.val[2]);
+        local_index += ctr[2];
+        vst1_s16(&local_buf[local_index], (int16x4_t)value8.val[3]);
+        local_index += ctr[3];
 
-        i+= 8*3;
-    } while ((local_index < 256 - count) && (i < BUF_LEN));
+        bound = count + local_index;
+#ifdef DEBUG
+        printf("bound = %d, i = %d, local_index = %d\n", bound, i, local_index);
+#endif
+        i += 8 * 3;
+    } while ((bound < 256) && (i < BUF_LEN));
 
-    count = count > 256 ? 256 : count;
+    bound = bound > 256 ? 256 : bound;
 
-    for (i = 0; i < count < 256; i++)
+    for (i = 0; count < bound; i++, count++)
     {
         r[count] = local_buf[i];
+#ifdef DEBUG
+        printf("local_buf[%d]: %d: %d\n", i, count, local_buf[i]);
+#endif
     }
 
     return count;
