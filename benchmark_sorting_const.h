@@ -13,4 +13,8 @@ unsigned int rej_uniform(int16_t *r,
                          const uint8_t *buf,
                          unsigned int buflen);
 
+unsigned int neon_rej_uniform(int16_t *r, const uint8_t *buf);
+
+unsigned int neon_rej_uniform_half(int16_t *r, const uint8_t *buf);
+
 #endif
